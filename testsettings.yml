@@ -1,3 +1,4 @@
-database_urls:
+db_urls:
     - "mysql://root:@localhost:3306/db_merge_test"
     - "mysql://root:@localhost:3306/db_merge_test2"
+target_db_url: "mysql://root:@localhost:3306/db_merge_target"
