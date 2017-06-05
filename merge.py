@@ -78,9 +78,22 @@ def merge_dbs(source, target):
         set(table_name for table_name in source_base.metadata.tables.keys())
     )
     print("common_tables:", common_tables)
+    # TODO: analyse foreign keys:
+    # Each database is expected to have valid foreign keys.
+    # That means all FKs of a database reference the databas'es tables only.
+    # Thus there are 2 dependency graphs (1 for each database).
+    # They most likely have tables (in the dep. graph) in common.
+    # Since we assume the database's tables to have the same structure we know
+    # that tables with the same name also have the same dependencies.
+    # EXAMPLE:
+    # Graph 1:
+    # A -> B -> B ...
+    # In the case of cycles (B, e.g. tree structures) assigning primary and
+    # foreign keys MUST BE 2 STEPS.
     source_tables = source_base.metadata.tables
     for table_name in source_tables:
         source_table = source_tables[table_name]
+        import pudb; pudb.set_trace()
         if table_name in common_tables:
             print("merging table", table_name)
             merge_tables(
@@ -133,11 +146,17 @@ def copy_table(source, target, source_table):
     # s.commit()
 
 
-# Merges 2 tables with the same structure.
+# Merges 2 tables with the same structure (-> columns).
 # Algorithm:
-# 1. Create a dictionary mapping row hashes to rows.
-#    A hashed row is basically the hash of all fields except primary and foreign keys.
-#    Primary/foreign keys are later filled with the according values.
+# - Make sure the columns are the same (type and name, the order does not matter).
+# - Create a dictionary mapping row hashes to rows.
+#   A hashed row is basically the hash of all fields except primary and foreign keys.
+#   Primary/foreign keys are later filled with the according values.
+#   This results in eliminating duplicate rows (without their keys).
+# - Fill the dictionary with all rows of both tables.
+#   This removes all duplicates.
+# - Renew the primary key (assumed to be an integer id!)
+#   This is later used for the foreign keys.
 def merge_tables(source, target, table_name):
     (source_base, source_session, _), source_table = source
     (target_base, target_session, _), target_table = target
@@ -145,6 +164,10 @@ def merge_tables(source, target, table_name):
     # print(type(source_table.columns), source_table.columns)
     # print(source_table.columns.keys())
     # print(source_table.columns.values())
+
+    # source_table.columns.user_id.foreign_keys
+
+    rows_by_hash = {}
 
     if column_types_match(source_table, target_table):
         for column in source_table.columns:
