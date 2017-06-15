@@ -1,6 +1,7 @@
 import math
 import yaml
 
+from Input import Input
 
 # https://stackoverflow.com/a/20007730/6928824
 def ordinal(num):
@@ -47,17 +48,3 @@ def get_input(cli_args):
             "that will contain the merged databases: "
         )
     return Input(**settings)
-
-
-class Input():
-
-    def __init__(self, db_urls, target_db_url):
-        # print("> db_urls", db_urls)
-        self.db_urls = db_urls
-        self.target_db_url = target_db_url
-
-    def get_db_urls(self):
-        return self.db_urls
-
-    def get_target_db_url(self):
-        return self.target_db_url

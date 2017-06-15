@@ -26,7 +26,14 @@ class SourceMergeStrategy(MergeStrategy):
     To do so the relations must be known:
     - 1 user has 1 contact person
     - 1 contact person belongs to N users
+
+    Since there is a foreign key on `contact_person_id` the hash of the two
+    users is identical. When filling the hash dictionary the source must be
+    preferred when collisions happen.
     """
 
-    def merge_tables(self, source, target):
-        raise NotImplementedError("Must implement 'merge_tables'")
+    def choose_row(self, *rows_data):
+        for row, source in rows_data:
+            if source == "source":
+                return row
+        raise ValueError("Found no row with source 'source'")
