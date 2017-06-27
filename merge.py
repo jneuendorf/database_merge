@@ -1,10 +1,7 @@
 from typing import List, Iterable
 
-from sqlalchemy import create_engine, inspect, Table
-from sqlalchemy.exc import ArgumentError
-from sqlalchemy.orm import Session
-from sqlalchemy.ext.automap import automap_base
 # from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import inspect, Table
 from sqlalchemy_utils import database_exists, create_database
 
 import db_helpers
@@ -14,33 +11,11 @@ from Input import Input
 import value_generators
 
 
-# @returns [tuple] The reflected base and the session
-# (everything necessary for querying the database).
-def get_reflected_db(database_url: str, prepare_base=True):
-    Base = automap_base()
-    try:
-        engine = create_engine(database_url)
-    except ArgumentError as e:
-        raise ValueError(f"Invalid database url '{database_url}'") from e
-    session = Session(engine)
-    if prepare_base is True:
-        try:
-            Base.prepare(engine, reflect=True)
-        except Exception as e:
-            raise RuntimeError(
-                f"Error while trying to reflect the database '{database_url}'. "
-                "The problem could be that the database server is not running or "
-                "there is an inconsistency in the database itself, "
-                "e.g. a foreign key constraint that points to a non-existing table."
-            ) from e
-    return DbData(Base, session, engine)
-
-
 def merge(input_data: Input):
     merge_into_target_db(
-        get_reflected_db(input_data.get_target_db_url(), False),
+        db_helpers.get_reflected_db(input_data.get_target_db_url(), False),
         [
-            get_reflected_db(database_url)
+            db_helpers.get_reflected_db(database_url)
             for database_url in input_data.get_db_urls()
         ]
     )
