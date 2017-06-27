@@ -9,7 +9,7 @@ test:
 	python3 -m unittest discover -s ./spec -p "*_test.py"
 
 run:
-	python3 database_merge.py --settings-file=./testsettings.yml
+	python3 database_merge.py --settings-file=./testsettings.yml --log=DEBUG
 
 run_optimized:
 	python3 -O database_merge.py --settings-file=./testsettings.yml
