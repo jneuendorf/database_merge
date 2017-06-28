@@ -39,11 +39,13 @@ def get_table(db: DbData, table_name: str) -> Table:
 def truncate_table(db: DbData, table_name: str) -> None:
     # DROP FROM ...
     db.session.execute(get_table(db, table_name).delete())
+    db.session.commit()
 
 
 def insert_rows(target: DbData, table: Table, rows: Iterable[tuple]) -> None:
     for row in rows:
         target.session.execute(table.insert(row))
+    target.session.commit()
 
 
 def table_structures_equal(source_table: Table, target_table: Table):
@@ -98,26 +100,16 @@ def copy_table(source: DbData, target: DbData, source_table: Table) -> None:
     # from http://www.tylerlesmann.com/2009/apr/27/copying-databases-across-platforms-sqlalchemy/
     source_meta = MetaData(bind=source.engine)
     table = Table(source_table.name, source_meta, autoload=True)
-    table.metadata.create_all(target.engine)
-    # NewRecord = quick_mapper(table)
-    # columns = table.columns.keys()
-    # data = {}
-    # import pudb; pudb.set_trace()
-    # for record in source.session.query(table).all():
-    #     data = dict(
-    #         [(str(column), getattr(record, column)) for column in columns]
-    #     )
-    # print(data)
-    # target.session.merge(NewRecord(**data))
-    # target.session.commit()
+    table.metadata.create_all(bind=target.engine)
 
     query = source.session.query(source_table)
-    # import pudb; pudb.set_trace()
-    # target.session.bulk_save_objects(query.all())
-    for row in query:
-        # table.insert(row)
-        target.session.execute(table.insert(row))
-    target.session.commit()
+    # # target.session.bulk_save_objects(query.all())
+    # for row in query:
+    #     # table.insert(row)
+    #     target.session.execute(table.insert(row))
+    # target.session.commit()
+    insert_rows(target, table, query.all())
+
     # # This is the query we want to persist in a new table:
     # query = source.session.query(source_table)
     #
@@ -159,9 +151,3 @@ def copy_table(source: DbData, target: DbData, source_table: Table) -> None:
     # # ]
     # # s.bulk_save_objects(objects)
     # # s.commit()
-
-# def quick_mapper(table):
-#     Base = declarative_base()
-#     class GenericMapper(Base):
-#         __table__ = table
-#     return GenericMapper
