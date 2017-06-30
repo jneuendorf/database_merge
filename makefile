@@ -9,6 +9,14 @@ test:
 	@# use '-v' for higher verbosity
 	python3 -m unittest discover -s ./spec -p "*_test.py"
 
+
+test-cov: test
+	coverage run --source=. -m unittest discover -s ./spec -p "*_test.py"
+	coverage report -m
+
+test-cov-html: test-cov
+	coverage html
+
 run:
 	python3 database_merge.py --settings-file=./testsettings.yml --log=DEBUG
 

@@ -1,3 +1,4 @@
+coverage
 SQLAlchemy
 sqlalchemy-utils
 PyYAML

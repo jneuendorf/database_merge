@@ -32,7 +32,7 @@ class SourceMergeStrategy(MergeStrategy):
     preferred when collisions happen.
     """
 
-    def choose_row(self, *rows_data):
+    def _choose_row(self, *rows_data) -> tuple:
         # try:
         #     if rows_data[1][2] == "Admin":
         #         import pudb; pudb.set_trace()

@@ -1,3 +1,4 @@
+import logging
 from typing import Iterable
 
 from sqlalchemy import MetaData, Table
@@ -69,9 +70,13 @@ def table_structures_equal(source_table: Table, target_table: Table):
     #     if not found_match:
     #         return False
     # return True
-    print(
-        "matching cols for", source_table.name, ":",
-        num_matching_cols, "of", len(source_table.columns)
+    logging.debug(
+        "matching cols for"
+        + source_table.name
+        + ":"
+        + str(num_matching_cols)
+        + "of"
+        + str(len(source_table.columns))
     )
     return num_matching_cols == len(source_table.columns)
 

@@ -96,3 +96,16 @@ class DbHelpersTest(unittest.TestCase):
         )
         # no model because no 2nd reflection has taken place
         self.assertNotIn("users", self.db2.base.metadata)
+        # re-reflecting does NOT work...
+        # self.db2 = db_helpers.get_reflected_db(self.DB2_URL)
+        # self.assertIn("users", self.db2.base.metadata)
+
+    def test_table_structures_equal(self):
+        self.assertTrue(db_helpers.table_structures_equal(
+            self.tables["users"],
+            self.tables["users"]
+        ))
+        self.assertFalse(db_helpers.table_structures_equal(
+            self.tables["users"],
+            self.tables["orders"]
+        ))
