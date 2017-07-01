@@ -49,6 +49,10 @@ def insert_rows(target: DbData, table: Table, rows: Iterable[tuple]) -> None:
     target.session.commit()
 
 
+def get_rows(db: DbData, table_name: str) -> Iterable[tuple]:
+    return db.session.query(db.base.metadata.tables[table_name]).all()
+
+
 def table_structures_equal(source_table: Table, target_table: Table):
     # print("table_structures_equal??")
     # print(source_table, target_table)

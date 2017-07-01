@@ -1,12 +1,11 @@
 import os
 import unittest
 
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, String, Table
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.ext.declarative import declarative_base
 
 import strategies
 import db_helpers
-
 
 class MergeTest(unittest.TestCase):
 
@@ -38,8 +37,6 @@ class MergeTest(unittest.TestCase):
             def __repr__(self):
                 return f"<Order(id='{self.id}', total='{self.total}', user_id='{self.user_id}')>"
 
-        import pudb; pudb.set_trace()
-
         engine = create_engine(self.DB_URL)
         engine2 = create_engine(self.DB2_URL)
         Base.metadata.create_all(bind=engine)
@@ -59,24 +56,21 @@ class MergeTest(unittest.TestCase):
             (2, 12.39, 2),
             (3, 42.00, 3),
         ])
-        # db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "users"), [
-        #     (2, "testuser2", "pw2"),
-        #     (3, "testuser3 with more data", "pw3"),
-        # ])
-        # db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "orders"), [
-        #     (2, 13.37, 3),
-        #     (5, 51.10, 3),
-        # ])
-
-        # queried_rows = self.db.session.query(User.__table__).all()
-        # import pudb; pudb.set_trace()
-        # self.assertEqual(inserted_rows, queried_rows)
+        db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "users"), [
+            (2, "testuser2", "pw2"),
+            (3, "testuser3 with more data", "pw3"),
+        ])
+        db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "orders"), [
+            (2, 13.37, 3),
+            (5, 51.10, 3),
+        ])
 
     def tearDown(self):
         os.remove(self.SQLITE_FILE)
         os.remove(self.SQLITE_FILE2)
 
-    # def test_merge_source(self):
-    #     strategy = strategies.SourceMergeStrategy()
-    #     # merge = strategy.merge_tables(*self.tables)
-    #     # self.assertEqual(merge.columns, self.tables[0].columns)
+    def test_merge_source(self):
+        strategy = strategies.SourceMergeStrategy()
+        import pudb; pudb.set_trace()
+        # merge = strategy.merge_tables(*self.tables)
+        # self.assertEqual(merge.columns, self.tables[0].columns)

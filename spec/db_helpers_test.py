@@ -48,7 +48,16 @@ class DbHelpersTest(unittest.TestCase):
         # self.db.base.metadata.drop_all(bind=self.db.engine)
         os.remove(self.SQLITE_FILE)
 
+    @staticmethod
+    def get_test_data():
+        return [
+            (1, "testuser1", "pw1"),
+            (2, "testuser2", "pw2"),
+            (3, "testuser3", "pw3"),
+        ]
 
+    ###########################################################################
+    # TESTS
     def test_setup(self):
         self.assertEqual(
             sorted(list(self.tables.keys())),
@@ -65,18 +74,17 @@ class DbHelpersTest(unittest.TestCase):
         self.assertEqual(order_table.name, "orders")
 
     def test_insert_rows(self):
-        inserted_rows = [
-            (1, "testuser1", "pw1"),
-            (2, "testuser2", "pw2"),
-            (3, "testuser3", "pw3"),
-        ]
         db_helpers.insert_rows(
             self.db,
             db_helpers.get_table(self.db, "users"),
-            inserted_rows
+            DbHelpersTest.get_test_data()
         )
         queried_rows = self.db.session.query(self.tables["users"]).all()
-        self.assertEqual(inserted_rows, queried_rows)
+        self.assertEqual(queried_rows, DbHelpersTest.get_test_data())
+
+    def test_get_rows(self):
+        self.test_insert_rows()
+        self.assertEqual(db_helpers.get_rows(self.db, "users"), DbHelpersTest.get_test_data())
 
     def test_truncate_table(self):
         self.test_insert_rows()

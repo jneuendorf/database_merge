@@ -5,13 +5,13 @@ install:
 	pip3 install -r requirements.txt
 
 test:
-	rm -f test.db
+	@# remove files in case a test has been interrupted so `tearDown` has not happened
+	rm -f test*.db
 	@# use '-v' for higher verbosity
-	python3 -m unittest discover -s ./spec -p "*_test.py"
-
+	python3 -m unittest discover --start-directory ./spec --pattern "*_test.py"
 
 test-cov: test
-	coverage run --source=. -m unittest discover -s ./spec -p "*_test.py"
+	coverage run --source=. --omit=database_merge.py -m unittest discover --start-directory ./spec --pattern "*_test.py"
 	coverage report -m
 
 test-cov-html: test-cov
