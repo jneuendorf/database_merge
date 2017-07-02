@@ -4,16 +4,19 @@ import unittest
 from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, String
 from sqlalchemy.ext.declarative import declarative_base
 
-import strategies
 import db_helpers
+from Input import Input
+import strategies
 
 class MergeTest(unittest.TestCase):
 
     # database reflection apparently does not work for in-memory sqlite dbs
     SQLITE_FILE = "test.db"
     SQLITE_FILE2 = "test2.db"
+    SQLITE_FILE_TARGET = "test_target.db"
     DB_URL = f"sqlite:///{SQLITE_FILE}"
     DB2_URL = f"sqlite:///{SQLITE_FILE2}"
+    DB_URL_TARGET = f"sqlite:///{SQLITE_FILE_TARGET}"
 
     def setUp(self):
         Base = declarative_base()
@@ -69,6 +72,16 @@ class MergeTest(unittest.TestCase):
         os.remove(self.SQLITE_FILE)
         os.remove(self.SQLITE_FILE2)
 
+    @classmethod
+    def get_test_input(cls):
+        return Input(
+            db_urls=[cls.DB_URL, cls.DB2_URL],
+            target_db_url=cls.DB_URL_TARGET,
+        )
+
+
+    ###########################################################################
+    # TESTS
     def test_merge_source(self):
         strategy = strategies.SourceMergeStrategy()
         import pudb; pudb.set_trace()

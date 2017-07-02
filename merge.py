@@ -24,7 +24,7 @@ def merge(input_data: Input):
 # Merge N databases into the target database.
 # merged_db = merge(merge(merge(db1, db2), db3), db4).
 # @param reflected_dbs [list] At least 2 databases.
-def merge_into_target_db(target_db: DbData, reflected_dbs: list):
+def merge_into_target_db(target_db: DbData, reflected_dbs: Iterable[DbData]):
     prepare_target_db(target_db)
     for db in reflected_dbs:
         merge_dbs(db, target_db)
@@ -52,7 +52,6 @@ def prepare_target_db(target_db: DbData):
         print("tables after clearing", inspect(engine).get_table_names())
 
 
-# Merges the 2nd database into the 1st.
 def merge_dbs(source: DbData, target: DbData) -> None:
     common_tables = (
         set(table_name for table_name in target.inspector.get_table_names())
