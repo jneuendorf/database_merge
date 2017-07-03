@@ -19,18 +19,13 @@ class DbHelpersTest(unittest.TestCase):
         # pylint: disable=unused-variable
         class User(Base): # type: ignore
             __tablename__ = "users"
-
             id = Column(Integer, primary_key=True)
             name = Column(String)
             password = Column(String)
 
-            def __repr__(self):
-                return f"<User(name='{self.name}', password='{self.password}')>"
-
         # pylint: disable=unused-variable
         class Order(Base): # type: ignore
             __tablename__ = "orders"
-
             id = Column(Integer, primary_key=True)
             items = Column(String)
             total = Column(Numeric)
@@ -63,6 +58,12 @@ class DbHelpersTest(unittest.TestCase):
             sorted(list(self.tables.keys())),
             ["orders", "users"]
         )
+
+    def test_get_reflected_db(self):
+        # some if this has already been implicitly tested in setUp and test_setup
+        def invalid_db_url():
+            return db_helpers.get_reflected_db("asdf")
+        self.assertRaises(ValueError, invalid_db_url)
 
     def test_get_table(self):
         user_table = db_helpers.get_table(self.db, "users")

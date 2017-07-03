@@ -27,18 +27,12 @@ class MergeTest(unittest.TestCase):
             name = Column(String)
             password = Column(String)
 
-            def __repr__(self):
-                return f"<User(id='{self.id}', name='{self.name}', password='{self.password}')>"
-
         # pylint: disable=unused-variable
         class Order(Base): # type: ignore
             __tablename__ = "orders"
             id = Column(Integer, primary_key=True)
             total = Column(Numeric)
             user_id = Column(Integer, ForeignKey("users.id"))
-
-            def __repr__(self):
-                return f"<Order(id='{self.id}', total='{self.total}', user_id='{self.user_id}')>"
 
         engine = create_engine(self.DB_URL)
         engine2 = create_engine(self.DB2_URL)
@@ -73,17 +67,17 @@ class MergeTest(unittest.TestCase):
         os.remove(self.SQLITE_FILE2)
 
     @classmethod
-    def get_test_input(cls):
-        return Input(
-            db_urls=[cls.DB_URL, cls.DB2_URL],
-            target_db_url=cls.DB_URL_TARGET,
-        )
+    def get_input_kwargs(cls):
+        return {
+            "db_urls": [cls.DB_URL, cls.DB2_URL],
+            "target_db_url": cls.DB_URL_TARGET,
+        }
 
 
     ###########################################################################
     # TESTS
-    # def test_merge_source(self):
-    #     strategy = strategies.SourceMergeStrategy()
+    def test_merge(self):
+        input_data = Input(**self.get_input_kwargs(), strategy=strategies.SourceMergeStrategy())
     #     import pudb; pudb.set_trace()
     #     # merge = strategy.merge_tables(*self.tables)
     #     # self.assertEqual(merge.columns, self.tables[0].columns)

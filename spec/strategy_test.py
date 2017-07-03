@@ -35,6 +35,13 @@ class StrategyTest(unittest.TestCase):
 
     ###########################################################################
     # TESTS
+    def test_merge_abstract(self):
+        strategy = strategies.MergeStrategy()
+        rows_datas = self.get_test_rows()
+        def using_abstract_classes_instance():
+            return strategy.choose_row(*rows_datas[0])
+        self.assertRaises(NotImplementedError, using_abstract_classes_instance)
+
     def test_merge_source(self):
         strategy = strategies.SourceMergeStrategy()
         rows_datas = self.get_test_rows()
