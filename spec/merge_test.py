@@ -82,8 +82,8 @@ class MergeTest(unittest.TestCase):
 
     ###########################################################################
     # TESTS
-    def test_merge_source(self):
-        strategy = strategies.SourceMergeStrategy()
-        import pudb; pudb.set_trace()
-        # merge = strategy.merge_tables(*self.tables)
-        # self.assertEqual(merge.columns, self.tables[0].columns)
+    # def test_merge_source(self):
+    #     strategy = strategies.SourceMergeStrategy()
+    #     import pudb; pudb.set_trace()
+    #     # merge = strategy.merge_tables(*self.tables)
+    #     # self.assertEqual(merge.columns, self.tables[0].columns)

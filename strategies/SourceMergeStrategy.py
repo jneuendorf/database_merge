@@ -1,4 +1,4 @@
-from . import MergeStrategy
+from .MergeStrategy import MergeStrategy
 
 
 class SourceMergeStrategy(MergeStrategy):

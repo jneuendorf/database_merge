@@ -3,6 +3,7 @@ import logging
 
 class MergeStrategy():
 
+    # `rows_data` is a list of tuples, each tuple being (row, origin)
     def choose_row(self, *rows_data) -> tuple:
         row = self._choose_row(*rows_data)
         logging.info(
