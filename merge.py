@@ -13,10 +13,10 @@ import value_generators
 
 def merge(input_data: Input):
     merge_into_target_db(
-        db_helpers.get_reflected_db(input_data.get_target_db_url(), False),
+        db_helpers.get_reflected_db(input_data.target_db_url, False),
         [
             db_helpers.get_reflected_db(database_url)
-            for database_url in input_data.get_db_urls()
+            for database_url in input_data.db_urls
         ]
     )
 

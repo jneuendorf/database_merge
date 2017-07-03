@@ -10,6 +10,14 @@ class ValueGeneratorTest(unittest.TestCase):
 
     ###########################################################################
     # TESTS
+    def test_abstract_value_generator(self):
+        def using_abstract_classes_instance():
+            return value_generators.ValueGenerator()
+        self.assertRaises(
+            NotImplementedError,
+            using_abstract_classes_instance
+        )
+
     def test_int_value_generator(self):
         int_vg = value_generators.value_generator_for_type(int)
 

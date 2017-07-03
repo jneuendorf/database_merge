@@ -5,12 +5,6 @@ import strategies
 
 class StrategyTest(unittest.TestCase):
 
-    # def setUp(self):
-    #     pass
-
-    # def tearDown(self):
-    #     pass
-
     @classmethod
     def get_test_rows(cls):
         return [
