@@ -20,7 +20,7 @@ class RowsDict():
     def get(self, key):
         return self.rows.get(key)
 
-    def put(self, row_hash, row, origin):
+    def put(self, row_hash: int, row: tuple, origin: str) -> None:
         # if len(row) > 4 and row[4] == "B4f":
         #     # TODO: this is weird:
         #     # row[3] == "Not Mustermann" from db_merge_test2, origin == "source"
@@ -29,8 +29,8 @@ class RowsDict():
             print("using a strategy to choose a row!")
             # import pudb; pudb.set_trace()
             chosen_row = self.strategy.choose_row(
-                (row, origin),
                 self.rows[row_hash],
+                (row, origin),
             )
             self.rows[row_hash] = (chosen_row, origin)
         else:
@@ -44,4 +44,4 @@ class RowsDict():
         return f"RowsDict(strategy={self.strategy.__class__.__name__}, rows={rows})"
 
     def __iter__(self):
-        return self.rows
+        return iter(self.rows)
