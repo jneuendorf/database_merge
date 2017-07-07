@@ -6,6 +6,7 @@ from sqlalchemy.ext.declarative import declarative_base
 
 import db_helpers
 from Input import Input
+from merge import merge
 import strategies
 
 class MergeTest(unittest.TestCase):
@@ -78,6 +79,5 @@ class MergeTest(unittest.TestCase):
     # TESTS
     def test_merge(self):
         input_data = Input(**self.get_input_kwargs(), strategy=strategies.SourceMergeStrategy())
-    #     import pudb; pudb.set_trace()
-    #     # merge = strategy.merge_tables(*self.tables)
-    #     # self.assertEqual(merge.columns, self.tables[0].columns)
+        merge(input_data)
+        # self.assertEqual(merge.columns, self.tables[0].columns)

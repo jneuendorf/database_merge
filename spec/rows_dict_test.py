@@ -6,8 +6,7 @@ from strategies import MergeStrategy, RowsDict
 class PseudoMergeStrategy(MergeStrategy):
 
     def _choose_row(self, *rows_data) -> tuple:
-        for row, _ in rows_data:
-            return row
+        return rows_data[0][0]
 
 
 class RowsDictTest(unittest.TestCase):

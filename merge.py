@@ -1,3 +1,4 @@
+import logging
 from typing import List, Iterable
 
 # from sqlalchemy.ext.declarative import declarative_base
@@ -28,6 +29,7 @@ def merge_into_target_db(target_db: DbData, reflected_dbs: Iterable[DbData]):
     prepare_target_db(target_db)
     for db in reflected_dbs:
         merge_dbs(db, target_db)
+        db_helpers.rereflect(target_db)
     return target_db
 
 
@@ -36,6 +38,7 @@ def prepare_target_db(target_db: DbData):
     base, engine = target_db.base, target_db.engine
     if not database_exists(engine.url):
         print("creating target db")
+        logging.debug(f"creating target database {engine.url}")
         create_database(engine.url)
         base.prepare(engine, reflect=True)
     else:
@@ -54,15 +57,15 @@ def prepare_target_db(target_db: DbData):
 
 def merge_dbs(source: DbData, target: DbData) -> None:
     common_tables = (
-        set(table_name for table_name in target.inspector.get_table_names())
-        &
         set(table_name for table_name in source.inspector.get_table_names())
+        &
+        set(table_name for table_name in target.inspector.get_table_names())
     )
-    print(
-        "common_tables of", source.engine.url, "and", target.engine.url, ":",
-        sorted(common_tables)
+    logging.debug(
+        f"common_tables of {source.engine.url} and {target.engine.url}:"
+        + str(sorted(common_tables))
     )
-    # TODO: analyse foreign keys:
+    # TODO: analyze foreign keys:
     # Each database is expected to have valid foreign keys.
     # That means all FKs of a database reference the databas'es tables only.
     # Thus there are 2 dependency graphs (1 for each database).
@@ -77,8 +80,6 @@ def merge_dbs(source: DbData, target: DbData) -> None:
     source_tables = source.base.metadata.tables
     for table_name in source_tables:
         source_table = source_tables[table_name]
-        # if table_name == "full_applications":
-        #     import pudb; pudb.set_trace()
         if table_name in common_tables:
             print("merging table", table_name)
             merge_tables(source, target, table_name)
@@ -125,7 +126,6 @@ def merge_tables(source: DbData, target: DbData, table_name: str):
             )
         print("merged:", merged_rows)
         rows = adjust_relationships(merged_rows)
-        import pudb; pudb.set_trace()
         # truncating does not work...
         db_helpers.truncate_table(target, table_name)
         db_helpers.insert_rows(target, target_table, rows)

@@ -1,5 +1,5 @@
 MODULE = database-merge
-MAIN = ./database_merge.py
+MAIN = ./main.py
 
 install:
 	pip3 install -r requirements.txt
@@ -11,17 +11,17 @@ test:
 	python3 -m unittest discover --start-directory ./spec --pattern "*_test.py"
 
 test-cov: test
-	coverage run --source=. --omit=database_merge.py -m unittest discover --start-directory ./spec --pattern "*_test.py"
+	coverage run --source=. --omit=$(MAIN) -m unittest discover --start-directory ./spec --pattern "*_test.py"
 	coverage report -m
 
 test-cov-html: test-cov
 	coverage html
 
 run:
-	python3 database_merge.py --settings-file=./testsettings.yml --log=DEBUG
+	python3 $(MAIN) --settings-file=./testsettings.yml --log=DEBUG
 
 run_optimized:
-	python3 -O database_merge.py --settings-file=./testsettings.yml
+	python3 -O $(MAIN) --settings-file=./testsettings.yml
 
 lint:
 	pylint $(MODULE)

@@ -13,7 +13,7 @@ from .private_helpers import columns_equal
 
 # @returns [tuple] The reflected base and the session
 # (everything necessary for querying the database).
-def get_reflected_db(database_url: str, prepare_base=True):
+def get_reflected_db(database_url: str, prepare_base=True) -> DbData:
     Base = automap_base()
     try:
         engine = create_engine(database_url)
@@ -31,6 +31,10 @@ def get_reflected_db(database_url: str, prepare_base=True):
                 "e.g. a foreign key constraint that points to a non-existing table."
             ) from e
     return DbData(Base, session, engine)
+
+
+def rereflect(db: DbData) -> None:
+    db.base.prepare(db.engine, reflect=True)
 
 
 def get_table(db: DbData, table_name: str) -> Table:
