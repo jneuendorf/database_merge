@@ -46,8 +46,9 @@ class MergeTest(unittest.TestCase):
         # DATA SETUP
         db_helpers.insert_rows(self.db, db_helpers.get_table(self.db, "users"), [
             (1, "testuser1", "pw1"),
-            (2, "testuser2 with data that should be overridden", "pw2"),
+            (2, "testuser2 with more data", "pw2"),
             (3, "testuser3", "pw3"),
+            (4, "testuser4", "pw4"),
         ])
         db_helpers.insert_rows(self.db, db_helpers.get_table(self.db, "orders"), [
             (1, 30.12, 1),
@@ -55,8 +56,9 @@ class MergeTest(unittest.TestCase):
             (3, 42.00, 3),
         ])
         db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "users"), [
-            (2, "testuser2", "pw2"),
+            (2, "testuser2", "pw21"),
             (3, "testuser3 with more data", "pw3"),
+            (7, "testuser4", "pw4"),
         ])
         db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "orders"), [
             (2, 13.37, 3),
@@ -79,5 +81,26 @@ class MergeTest(unittest.TestCase):
     # TESTS
     def test_merge(self):
         input_data = Input(**self.get_input_kwargs(), strategy=strategies.SourceMergeStrategy())
-        merge(input_data)
-        # self.assertEqual(merge.columns, self.tables[0].columns)
+        target = merge(input_data)
+
+        def strip_ids(rows):
+            return [row[1:] for row in rows]
+
+        rows = db_helpers.get_rows(target, "users")
+        # compare rows without IDs (order doesn't matter)
+        self.assertEqual(
+            set(strip_ids(rows)),
+            set(strip_ids([
+                (1, "testuser1", "pw1"),
+                (2, "testuser2 with more data", "pw2"),
+                (3, "testuser3", "pw3"),
+                (4, "testuser4", "pw4"),
+                (2, "testuser2", "pw21"),
+                (3, "testuser3 with more data", "pw3"),
+            ]))
+        )
+        # make sure IDs are unique
+        self.assertEqual(
+            len(rows),
+            len(set([row[0] for row in rows]))
+        )

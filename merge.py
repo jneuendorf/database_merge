@@ -12,7 +12,7 @@ from Input import Input
 import value_generators
 
 
-def merge(input_data: Input):
+def merge(input_data: Input) -> DbData:
     merge_into_target_db(
         db_helpers.get_reflected_db(input_data.target_db_url, False),
         [
@@ -20,6 +20,7 @@ def merge(input_data: Input):
             for database_url in input_data.db_urls
         ]
     )
+    return db_helpers.get_reflected_db(input_data.target_db_url, True)
 
 
 # Merge N databases into the target database.
