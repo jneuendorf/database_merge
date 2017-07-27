@@ -48,6 +48,8 @@ def truncate_table(db: DbData, table_name: str) -> None:
 
 
 def insert_rows(target: DbData, table: Table, rows: Iterable[tuple]) -> None:
+    """'table' argument cannot be the table name as in the other functions
+    because there might be no table object with the wanted name in 'target' yet."""
     for row in rows:
         target.session.execute(table.insert(row))
     target.session.commit()
@@ -89,59 +91,29 @@ def table_structures_equal(source_table: Table, target_table: Table):
     return num_matching_cols == len(source_table.columns)
 
 
-# (Base, session, engine)
-def copy_table(source: DbData, target: DbData, source_table: Table) -> None:
+def copy_table(source: DbData, target: DbData, table_name: str) -> None:
     # from http://www.tylerlesmann.com/2009/apr/27/copying-databases-across-platforms-sqlalchemy/
     source_meta = MetaData(bind=source.engine)
-    table = Table(source_table.name, source_meta, autoload=True)
+    table = Table(table_name, source_meta, autoload=True)
     table.metadata.create_all(bind=target.engine)
 
-    query = source.session.query(source_table)
-    # # target.session.bulk_save_objects(query.all())
-    # for row in query:
-    #     # table.insert(row)
-    #     target.session.execute(table.insert(row))
-    # target.session.commit()
+    query = source.session.query(get_table(source, table_name))
     insert_rows(target, table, query.all())
 
-    # # This is the query we want to persist in a new table:
-    # query = source.session.query(source_table)
-    #
-    # # Build the schema for the new table
-    # # based on the columns that will be returned
-    # # by the query:
-    # metadata = MetaData(bind=target.engine)
-    # TODO: copy more stuff like primary and foreign keys and more attributes like autoincrement etc
-    # # Column('id', ForeignKey('other.id'), primary_key=True, autoincrement='ignore_fk')
-    # # columns = [Column(desc['name'], desc['type']) for desc in query.column_descriptions]
-    # columns = []
-    # for desc in query.column_descriptions:
-    #     col = desc['expr']
-    #     col_copy = col.copy()
-    #     col_copy.foreign_keys = col.foreign_keys
-    #     assert(col_copy.foreign_keys is col.foreign_keys)
-    #     import pudb; pudb.set_trace()
-    #     columns.append(col_copy)
-    # # column_names = [desc['name'] for desc in query.column_descriptions]
-    # table = Table(source_table.name, metadata, *columns)
-    #
-    # # Create the new table in the destination database
-    # table.create(target.engine)
-    #
-    # # Finally execute the query
-    # target.session = Session(target.engine)
-    # # Bulk add isn't that complicated: destSession.add_all(list_of_rows)
-    # for row in query:
-    #     target.session.execute(table.insert(row))
-    # target.session.commit()
-    # # bulk insert:
-    # http://docs.sqlalchemy.org/en/latest/orm/session_api.html#sqlalchemy.orm.session.Session.bulk_save_objects
-    # http://docs.sqlalchemy.org/en/latest/orm/persistence_techniques.html#bulk-operations
-    # # s = Session()
-    # # objects = [
-    # #     User(name="u1"),
-    # #     User(name="u2"),
-    # #     User(name="u3")
-    # # ]
-    # # s.bulk_save_objects(objects)
-    # # s.commit()
+def find_referencing_tables(db: DbData, table_name: str) -> Iterable[Table]:
+    table = get_table(db, table_name)
+    primary_keys = list(table.primary_key.columns)
+    sorted_tables = db.base.metadata.sorted_tables
+    start_index = sorted_tables.index(table) + 1
+    # list of tables that might have a reference to 'table'
+    candidates = sorted_tables[start_index:]
+    referencing_tables = []
+    for candidate in candidates:
+        for fk in candidate.foreign_keys:
+            if fk.column in primary_keys:
+                referencing_tables.append(candidate)
+                break
+    # fk_set = table.columns[some].foreign_keys
+    # fk.column == referenced column instance (of referenced table)
+    import pudb; pudb.set_trace()
+    return referencing_tables

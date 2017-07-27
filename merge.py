@@ -1,5 +1,5 @@
 import logging
-from typing import List, Iterable
+from typing import Any, Dict, Iterable, List, Tuple
 
 # from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import inspect, Table
@@ -78,15 +78,32 @@ def merge_dbs(source: DbData, target: DbData) -> None:
     # A -> B -> B ...
     # In the case of cycles (B, e.g. tree structures) assigning primary and
     # foreign keys MUST BE 2 STEPS.
-    source_tables = source.base.metadata.tables
-    for table_name in source_tables:
-        source_table = source_tables[table_name]
+
+    merged_tables = []
+
+    # The sorting will place Table objects that have dependencies first,
+    # before the dependencies themselves, representing the order
+    # in which they can be created.
+    source_tables = reversed(source.base.metadata.sorted_tables)
+
+    for source_table in source_tables:
+        table_name = source_table.name
+        # source_table = source_tables[table_name]
         if table_name in common_tables:
             print("merging table", table_name)
-            merge_tables(source, target, table_name)
+            merged_tables.append(merge_tables(source, target, table_name))
         else:
             print("copying table", table_name)
-            db_helpers.copy_table(source, target, source_table)
+            db_helpers.copy_table(source, target, table_name)
+
+    merged_and_adjusted_relations_tables = adjust_relationships(target, merged_tables)
+    for table_name, rows_to_insert in merged_and_adjusted_relations_tables.items():
+        db_helpers.truncate_table(target, table_name)
+        db_helpers.insert_rows(
+            target,
+            db_helpers.get_table(target, table_name),
+            rows_to_insert
+        )
 
 
 # Merges 2 tables with the same structure (-> columns).
@@ -100,7 +117,7 @@ def merge_dbs(source: DbData, target: DbData) -> None:
 #   This removes all duplicates.
 # - Renew the primary key (assumed to be an integer id!)
 #   This is later used for the foreign keys.
-def merge_tables(source: DbData, target: DbData, table_name: str):
+def merge_tables(source: DbData, target: DbData, table_name: str) -> RowsDict:
     source_table = db_helpers.get_table(source, table_name)
     target_table = db_helpers.get_table(target, table_name)
 
@@ -126,15 +143,16 @@ def merge_tables(source: DbData, target: DbData, table_name: str):
                 "target"
             )
         print("merged:", merged_rows)
-        rows = adjust_relationships(merged_rows)
-        # truncating does not work...
-        db_helpers.truncate_table(target, table_name)
-        db_helpers.insert_rows(target, target_table, rows)
+        # rows = adjust_relationships(merged_rows)
+        # # truncating does not work...
+        # db_helpers.truncate_table(target, table_name)
+        # db_helpers.insert_rows(target, target_table, rows)
     else:
         print(
             f"WARNING: not merging tables with name '{table_name}' "
             "because their structures are not equal."
         )
+    return merged_rows
 
 
 def hash_row(table: Table, row: tuple) -> int:
@@ -143,7 +161,7 @@ def hash_row(table: Table, row: tuple) -> int:
         value for i, value in enumerate(row)
         if i in regarded_indices
     ))
-    print("hash for row", row, "=", hash_value)
+    # print("hash for row", row, "=", hash_value)
     return hash_value
 
 
@@ -154,18 +172,86 @@ def get_indices_for_hashing(table: Table) -> List[int]:
     ]
 
 
-def adjust_relationships(merged_rows: RowsDict) -> Iterable[tuple]:
-    """Reassigns e.g. primary keys so relationships stay the same.
-    The 'source' and 'target' arguments are needed to determine the current
-    relationships.
-    The keys are adjusted in the merged_rows RowsDict."""
-    id_generator = value_generators.value_generator_for_type(int)
-    rows_to_insert = []
-    for row in merged_rows.get_rows():
-        row = list(row)
-        row[0] = next(id_generator)
-        rows_to_insert.append(tuple(row))
-    return rows_to_insert
+# def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> List[Tuple[RowsDict, List[tuple]]]:
+def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str, List[Tuple[tuple, Any]]]:
+    """
+    Reassigns e.g. primary keys so relationships stay intact.
+    The keys are adjusted in the merged_rows RowsDict.
+
+    The algorithm works like so:
+
+    TL <- list of all tables (sorted in drop order)
+    for each table T in TL do
+    begin
+        RD <- RowsDict with the same table name as T
+        L <- [] (list of rows (and their old primary keys) to insert later)
+        for each row R in RD do
+        begin
+            P <- current primary key
+            generate a new primary key P' for R
+            update R with P'
+            append (R, P) to L
+        end
+    end
+
+    After this phase all rows have new primary keys and know their old ones.
+    We use that information to correct the currently broken foreign keys (due to the new primary keys).
+
+    for each table T in reversed(TL) do
+    begin
+        DL <- list of dependent tables (e.g. for a user table find all tables that have a user id)
+        for each D in DL do
+        begin
+            for row R in D's rows do
+            begin
+                find related row X in T (the one where the referencing column has the old primary key)
+                update the relation
+            end
+        end
+    end
+    """
+
+    tables_to_insert = {}
+    sorted_tables = db.base.metadata.sorted_tables
+
+    # Iterate tables from tables WITH foreign keys to tables WITHOUT foreign keys.
+    # -> Order in which the tables could be deleted.
+    for table in reversed(sorted_tables):
+        table_name = table.name
+        # find RowsDict with according `table_name`
+        merged_table = [
+            merged_table
+            for merged_table in merged_tables
+            if merged_table.table_name == table_name
+        ][0]
+
+        # ASSUMPTION: IDs as primary keys in 1st column
+        id_generator = value_generators.value_generator_for_type(int)
+        rows_to_insert = []
+        for row in merged_table.get_rows():
+            row = list(row)
+            old_pk = row[0]
+            row[0] = next(id_generator)
+            rows_to_insert.append(
+                (tuple(row), old_pk)
+            )
+        tables_to_insert[table_name] = rows_to_insert
+        # tables_to_insert.append((merged_table, rows_to_insert))
+
+    for table in sorted_tables:
+        table_name = table.name
+        referencing_tables = db_helpers.find_referencing_tables(db, table_name)
+
+    # for merged_table in merged_tables:
+    #     # assuming IDs as primary keys here
+    #     id_generator = value_generators.value_generator_for_type(int)
+    #     rows_to_insert = []
+    #     for row in merged_table.get_rows():
+    #         row = list(row)
+    #         row[0] = next(id_generator)
+    #         rows_to_insert.append(tuple(row))
+    #     tables_to_insert.append((merged_table, rows_to_insert))
+    return tables_to_insert
     # sorted_tables
     # fk_set = table.columns[some].foreign_keys
     # fk.column == referenced column instance (of referenced table)

@@ -1,7 +1,9 @@
 import os
+from typing import Dict, List, Union
 import unittest
 
-from sqlalchemy import create_engine, Column, ForeignKey, Integer, Numeric, String
+from sqlalchemy import create_engine, Column, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 
 import db_helpers
@@ -21,19 +23,22 @@ class MergeTest(unittest.TestCase):
 
     def setUp(self):
         Base = declarative_base()
-        # pylint: disable=unused-variable
         class User(Base): # type: ignore
             __tablename__ = "users"
             id = Column(Integer, primary_key=True)
             name = Column(String)
             password = Column(String)
+            orders = relationship("Order")
+        self.User = User
 
-        # pylint: disable=unused-variable
         class Order(Base): # type: ignore
             __tablename__ = "orders"
             id = Column(Integer, primary_key=True)
-            total = Column(Numeric)
+            # Using string instead of numeric to avoid sqlalchemy's warning.
+            total = Column(String)
             user_id = Column(Integer, ForeignKey("users.id"))
+            user = relationship("User", back_populates="orders")
+        self.Order = Order
 
         engine = create_engine(self.DB_URL)
         engine2 = create_engine(self.DB2_URL)
@@ -51,9 +56,10 @@ class MergeTest(unittest.TestCase):
             (4, "testuser4", "pw4"),
         ])
         db_helpers.insert_rows(self.db, db_helpers.get_table(self.db, "orders"), [
-            (1, 30.12, 1),
-            (2, 12.39, 2),
-            (3, 42.00, 3),
+            (1, "30.12", 1),
+            (2, "12.39", 2),
+            (3, "42.00", 3),
+            (4, "43.00", 4),
         ])
         db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "users"), [
             (2, "testuser2", "pw21"),
@@ -61,8 +67,9 @@ class MergeTest(unittest.TestCase):
             (7, "testuser4", "pw4"),
         ])
         db_helpers.insert_rows(self.db2, db_helpers.get_table(self.db2, "orders"), [
-            (2, 13.37, 3),
-            (5, 51.10, 3),
+            (2, "13.37", 2),
+            (5, "51.10", 3),
+            (6, "1.18", 7),
         ])
 
     def tearDown(self):
@@ -70,7 +77,7 @@ class MergeTest(unittest.TestCase):
         os.remove(self.SQLITE_FILE2)
 
     @classmethod
-    def get_input_kwargs(cls):
+    def get_input_kwargs(cls) -> Dict[str, Union[str, List[str]]]:
         return {
             "db_urls": [cls.DB_URL, cls.DB2_URL],
             "target_db_url": cls.DB_URL_TARGET,
@@ -79,17 +86,17 @@ class MergeTest(unittest.TestCase):
 
     ###########################################################################
     # TESTS
-    def test_merge(self):
+    def test_source_merge(self):
         input_data = Input(**self.get_input_kwargs(), strategy=strategies.SourceMergeStrategy())
         target = merge(input_data)
 
         def strip_ids(rows):
             return [row[1:] for row in rows]
 
-        rows = db_helpers.get_rows(target, "users")
+        users = db_helpers.get_rows(target, "users")
         # compare rows without IDs (order doesn't matter)
         self.assertEqual(
-            set(strip_ids(rows)),
+            set(strip_ids(users)),
             set(strip_ids([
                 (1, "testuser1", "pw1"),
                 (2, "testuser2 with more data", "pw2"),
@@ -101,6 +108,30 @@ class MergeTest(unittest.TestCase):
         )
         # make sure IDs are unique
         self.assertEqual(
-            len(rows),
-            len(set([row[0] for row in rows]))
+            len(users),
+            len(set([row[0] for row in users]))
         )
+
+
+        users = target.session.query(self.User).all()
+        # orders = target.session.query(self.Order).all()
+
+        totals_by_user = {
+            ("testuser1", "pw1"): {"30.12"},
+            ("testuser2 with more data", "pw2"): {"12.39"},
+            ("testuser3", "pw3"): {"42"},
+            ("testuser2", "pw21"): {"13.37"},
+            ("testuser3 with more data", "pw3"): {"51.10"},
+            # there should be both orders because the user exists in both databases
+            ("testuser4", "pw4"): {"43", "1.18"},
+        }
+
+        for user in users:
+            print((user.name, user.password))
+            print("expect:", totals_by_user[(user.name, user.password)])
+            print("got:", {float(order.total) for order in user.orders})
+            print("")
+            self.assertEqual(
+                {float(order.total) for order in user.orders},
+                totals_by_user[(user.name, user.password)]
+            )

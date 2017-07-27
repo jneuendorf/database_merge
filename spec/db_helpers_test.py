@@ -97,7 +97,7 @@ class DbHelpersTest(unittest.TestCase):
 
     def test_copy_table(self):
         self.test_insert_rows()
-        db_helpers.copy_table(self.db, self.db2, self.tables["users"])
+        db_helpers.copy_table(self.db, self.db2, "users")
         self.assertIn("users", self.db2.inspector.get_table_names())
         self.assertEqual(
             [column["name"] for column in self.db2.inspector.get_columns("users")],
@@ -118,3 +118,13 @@ class DbHelpersTest(unittest.TestCase):
             self.tables["users"],
             self.tables["orders"]
         ))
+
+    def test_find_referencing_tables(self):
+        self.assertEqual(
+            db_helpers.find_referencing_tables(self.db, "users"),
+            [db_helpers.get_table(self.db, "orders")]
+        )
+        self.assertEqual(
+            db_helpers.find_referencing_tables(self.db, "orders"),
+            []
+        )

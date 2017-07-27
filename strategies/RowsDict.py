@@ -1,6 +1,8 @@
 from collections import OrderedDict
+from typing import Iterable, Tuple, Union
 
 from .MergeStrategy import MergeStrategy
+
 
 class RowsDict():
     """This class is a wrapper around a ordered dictionary `rows`.
@@ -15,10 +17,10 @@ class RowsDict():
     def __init__(self, table_name: str, strategy: MergeStrategy) -> None:
         self.table_name = table_name
         self.strategy = strategy
-        self.rows = OrderedDict()
+        self.rows: OrderedDict = OrderedDict()
 
-    def get(self, key):
-        return self.rows.get(key)
+    def get(self, key) -> Union[Tuple[tuple, str], None]:
+        return self.rows.get(key, None)
 
     def put(self, row_hash: int, row: tuple, origin: str) -> None:
         # if len(row) > 4 and row[4] == "B4f":
@@ -26,7 +28,7 @@ class RowsDict():
         #     # row[3] == "Not Mustermann" from db_merge_test2, origin == "source"
         #     import pudb; pudb.set_trace()
         if row_hash in self.rows:
-            print("using a strategy to choose a row!")
+            # print("using a strategy to choose a row!")
             # import pudb; pudb.set_trace()
             chosen_row = self.strategy.choose_row(
                 self.rows[row_hash],
@@ -36,10 +38,10 @@ class RowsDict():
         else:
             self.rows[row_hash] = (row, origin)
 
-    def get_rows(self):
+    def get_rows(self) -> Iterable[tuple]:
         return (row for row_hash, (row, origin) in self.rows.items())
 
-    def __str__(self):
+    def __str__(self) -> str:
         rows = list(self.rows.values())
         return f"RowsDict(strategy={self.strategy.__class__.__name__}, rows={rows})"
 
