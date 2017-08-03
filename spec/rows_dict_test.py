@@ -16,22 +16,22 @@ class RowsDictTest(unittest.TestCase):
         return [
             {
                 "row_hash": 0,
-                "row": ("source0"),
+                "row": ("pk0", "source0"),
                 "origin": "source"
             },
             {
                 "row_hash": 0,
-                "row": ("source1"),
+                "row": ("pk1", "source1"),
                 "origin": "source"
             },
             {
                 "row_hash": 1,
-                "row": ("source2"),
+                "row": ("pk2", "source2"),
                 "origin": "source"
             },
             {
                 "row_hash": 2,
-                "row": ("target0"),
+                "row": ("pk3", "target0"),
                 "origin": "target"
             },
         ]
@@ -47,23 +47,30 @@ class RowsDictTest(unittest.TestCase):
         self.assertEqual(
             list(self.rows_dict.rows.items()),
             [
-                (0, (("source0"), "source")),
-                (1, (("source2"), "source")),
-                (2, (("target0"), "target")),
+                (0, (["pk0", "source0"], "source", frozenset(["pk0", "pk1"]))),
+                (1, (["pk2", "source2"], "source", frozenset(["pk2"]))),
+                (2, (["pk3", "target0"], "target", frozenset(["pk3"]))),
             ]
         )
 
     def test_get(self):
         self.test_put()
-        self.assertEqual(self.rows_dict.get(0), (("source0"), "source"))
-        self.assertEqual(self.rows_dict.get(1), (("source2"), "source"))
-        self.assertEqual(self.rows_dict.get(2), (("target0"), "target"))
+        self.assertEqual(
+            self.rows_dict.get(0),
+            (["pk0", "source0"], "source", frozenset(["pk0", "pk1"]))
+        )
+        self.assertEqual(self.rows_dict.get(1), (["pk2", "source2"], "source", frozenset(["pk2"])))
+        self.assertEqual(self.rows_dict.get(2), (["pk3", "target0"], "target", frozenset(["pk3"])))
 
     def test_get_rows(self):
         self.test_put()
         self.assertEqual(
             list(self.rows_dict.get_rows()),
-            [("source0"), ("source2"), ("target0")]
+            [
+                ["pk0", "source0"],
+                ["pk2", "source2"],
+                ["pk3", "target0"]
+            ]
         )
 
     def test_iter(self):

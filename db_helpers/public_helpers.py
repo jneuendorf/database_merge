@@ -1,7 +1,7 @@
 import logging
-from typing import Iterable
+from typing import Iterable, List, Tuple
 
-from sqlalchemy import MetaData, Table
+from sqlalchemy import MetaData, Table, Column
 from sqlalchemy import create_engine
 from sqlalchemy.exc import ArgumentError
 from sqlalchemy.orm import Session
@@ -100,20 +100,27 @@ def copy_table(source: DbData, target: DbData, table_name: str) -> None:
     query = source.session.query(get_table(source, table_name))
     insert_rows(target, table, query.all())
 
-def find_referencing_tables(db: DbData, table_name: str) -> Iterable[Table]:
+
+def find_referencing_tables_and_columns(db: DbData, table_name: str) -> List[Tuple[Table, List[Column]]]:
     table = get_table(db, table_name)
     primary_keys = list(table.primary_key.columns)
     sorted_tables = db.base.metadata.sorted_tables
     start_index = sorted_tables.index(table) + 1
     # list of tables that might have a reference to 'table'
     candidates = sorted_tables[start_index:]
-    referencing_tables = []
+    referencing_tables_and_columns = []
     for candidate in candidates:
-        for fk in candidate.foreign_keys:
-            if fk.column in primary_keys:
-                referencing_tables.append(candidate)
-                break
+        referencing_columns = [
+            tuple(fk.constraint.columns)[0]
+            for i, fk in enumerate(candidate.foreign_keys)
+            if fk.column in primary_keys
+        ]
+        if len(referencing_columns) > 0:
+            referencing_tables_and_columns.append(
+                (candidate, referencing_columns)
+            )
+
+    print("referencing_tables_and_columns for ", table_name, ":", referencing_tables_and_columns)
     # fk_set = table.columns[some].foreign_keys
     # fk.column == referenced column instance (of referenced table)
-    import pudb; pudb.set_trace()
-    return referencing_tables
+    return referencing_tables_and_columns

@@ -9,6 +9,8 @@ import db_helpers
 
 class DbHelpersTest(unittest.TestCase):
 
+    maxDiff = None
+
     SQLITE_FILE = "test.db"
     # 'test.db' is a relative path
     DB_URL = f"sqlite:///{SQLITE_FILE}"
@@ -119,12 +121,16 @@ class DbHelpersTest(unittest.TestCase):
             self.tables["orders"]
         ))
 
-    def test_find_referencing_tables(self):
+    def test_find_referencing_tables_and_columns(self):
+        # import pudb; pudb.set_trace()
+        result = db_helpers.find_referencing_tables_and_columns(self.db, "users")
+        # pylint: disable=unbalanced-tuple-unpacking
+        [[table, columns]] = result
         self.assertEqual(
-            db_helpers.find_referencing_tables(self.db, "users"),
-            [db_helpers.get_table(self.db, "orders")]
+            [table.name, [col.name for col in columns]],
+            ["orders", ["user_id"]]
         )
         self.assertEqual(
-            db_helpers.find_referencing_tables(self.db, "orders"),
+            db_helpers.find_referencing_tables_and_columns(self.db, "orders"),
             []
         )

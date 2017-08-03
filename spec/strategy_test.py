@@ -9,20 +9,20 @@ class StrategyTest(unittest.TestCase):
     def get_test_rows(cls):
         return [
             [
-                (("source0"), "source"),
-                (("target0"), "target"),
+                (("source0",), "source"),
+                (("target0",), "target"),
             ],
             [
-                (("target1"), "target"),
-                (("source1"), "source"),
+                (("target1",), "target"),
+                (("source1",), "source"),
             ],
             [
-                (("source2.1"), "source"),
-                (("source2.2"), "source"),
+                (("source2.1",), "source"),
+                (("source2.2",), "source"),
             ],
             [
-                (("target3.1"), "target"),
-                (("target3.2"), "target"),
+                (("target3.1",), "target"),
+                (("target3.2",), "target"),
             ],
         ]
 
@@ -40,9 +40,11 @@ class StrategyTest(unittest.TestCase):
         strategy = strategies.SourceMergeStrategy()
         rows_datas = self.get_test_rows()
 
-        self.assertEqual(strategy.choose_row(*rows_datas[0]), ("source0"))
-        self.assertEqual(strategy.choose_row(*rows_datas[1]), ("source1"))
-        self.assertEqual(strategy.choose_row(*rows_datas[2]), ("source2.1"))
+        import pudb; pudb.set_trace()
+
+        self.assertEqual(strategy.choose_row(*rows_datas[0]), ["source0"])
+        self.assertEqual(strategy.choose_row(*rows_datas[1]), ["source1"])
+        self.assertEqual(strategy.choose_row(*rows_datas[2]), ["source2.1"])
         def raises():
             return strategy.choose_row(*rows_datas[3])
         self.assertRaises(ValueError, raises)
@@ -51,9 +53,9 @@ class StrategyTest(unittest.TestCase):
         strategy = strategies.TargetMergeStrategy()
         rows_datas = self.get_test_rows()
 
-        self.assertEqual(strategy.choose_row(*rows_datas[0]), ("target0"))
-        self.assertEqual(strategy.choose_row(*rows_datas[1]), ("target1"))
+        self.assertEqual(strategy.choose_row(*rows_datas[0]), ["target0"])
+        self.assertEqual(strategy.choose_row(*rows_datas[1]), ["target1"])
         def raises():
             return strategy.choose_row(*rows_datas[2])
         self.assertRaises(ValueError, raises)
-        self.assertEqual(strategy.choose_row(*rows_datas[3]), ("target3.1"))
+        self.assertEqual(strategy.choose_row(*rows_datas[3]), ["target3.1"])

@@ -172,7 +172,6 @@ def get_indices_for_hashing(table: Table) -> List[int]:
     ]
 
 
-# def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> List[Tuple[RowsDict, List[tuple]]]:
 def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str, List[Tuple[tuple, Any]]]:
     """
     Reassigns e.g. primary keys so relationships stay intact.
@@ -195,23 +194,26 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
     end
 
     After this phase all rows have new primary keys and know their old ones.
-    We use that information to correct the currently broken foreign keys (due to the new primary keys).
+    We use that information to correct the currently broken foreign keys
+    (due to the new primary keys).
 
     for each table T in reversed(TL) do
     begin
-        DL <- list of dependent tables (e.g. for a user table find all tables that have a user id)
+        DL <- list of dependent tables (e.g. for a user table
+         find all tables that have a user id)
         for each D in DL do
         begin
             for row R in D's rows do
             begin
-                find related row X in T (the one where the referencing column has the old primary key)
+                find related row X in T (the one where the referencing column
+                 has the old primary key)
                 update the relation
             end
         end
     end
     """
 
-    tables_to_insert = {}
+    table_rows_by_name = {}
     sorted_tables = db.base.metadata.sorted_tables
 
     # Iterate tables from tables WITH foreign keys to tables WITHOUT foreign keys.
@@ -227,31 +229,55 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
 
         # ASSUMPTION: IDs as primary keys in 1st column
         id_generator = value_generators.value_generator_for_type(int)
-        rows_to_insert = []
-        for row in merged_table.get_rows():
-            row = list(row)
-            old_pk = row[0]
+        rows_by_old_pks = {}
+        for row, primary_keys in merged_table.get_rows_with_pks():
+            # row = list(row)
+            # old_pk = row[0]
             row[0] = next(id_generator)
-            rows_to_insert.append(
-                (tuple(row), old_pk)
-            )
-        tables_to_insert[table_name] = rows_to_insert
-        # tables_to_insert.append((merged_table, rows_to_insert))
+            rows_by_old_pks[primary_keys] = row
+        table_rows_by_name[table_name] = rows_by_old_pks
 
-    for table in sorted_tables:
-        table_name = table.name
-        referencing_tables = db_helpers.find_referencing_tables(db, table_name)
+    for referenced_table in sorted_tables:
+        referenced_table_name = referenced_table.name
+        referencing_tables = db_helpers.find_referencing_tables_and_columns(db, referenced_table_name)
+        for referencing_table, referencing_columns in referencing_tables:
+            # old_pks contains the primary keys before the merge
+            for _, referencing_row in table_rows_by_name[referencing_table.name].items():
+                for referencing_column in referencing_columns:
+                    ref_col_name = referencing_column.name
+                    fk_idx = [
+                        i
+                        for i, col in enumerate(referencing_table.columns)
+                        if col.name == ref_col_name
+                    ][0]
+                    # This is the primary key from after the merge
+                    # but still pointing to the primary key from before the merge.
+                    fk = referencing_row[fk_idx]
+                    referenced_row = None
+                    for old_pks in table_rows_by_name[referenced_table_name]:
+                        potentially_referenced_row = table_rows_by_name[referenced_table_name][old_pks]
+                        if fk in old_pks:
+                            referenced_row = potentially_referenced_row
+                            break
 
-    # for merged_table in merged_tables:
-    #     # assuming IDs as primary keys here
-    #     id_generator = value_generators.value_generator_for_type(int)
-    #     rows_to_insert = []
-    #     for row in merged_table.get_rows():
-    #         row = list(row)
-    #         row[0] = next(id_generator)
-    #         rows_to_insert.append(tuple(row))
-    #     tables_to_insert.append((merged_table, rows_to_insert))
-    return tables_to_insert
+                    if referenced_row is None:
+                        raise ValueError(
+                            f"Could not find a row with primary key {fk} "
+                            f"in {referenced_table_name}"
+                        )
+
+                    # if old_pks not in table_rows_by_name[referenced_table_name]:
+                    #     import pudb; pudb.set_trace()
+                    # referenced_row = table_rows_by_name[referenced_table_name][old_pks]
+                    # update row's foreign key value
+                    # ASSUMPTION: IDs as primary keys in 1st column
+                    referencing_row[fk_idx] = referenced_row[0]
+
+    # drop meta info about old primary keys
+    return {
+        table_name: [row for old_pks, row in rows_by_old_pks.items()]
+        for table_name, rows_by_old_pks in table_rows_by_name.items()
+    }
     # sorted_tables
     # fk_set = table.columns[some].foreign_keys
     # fk.column == referenced column instance (of referenced table)

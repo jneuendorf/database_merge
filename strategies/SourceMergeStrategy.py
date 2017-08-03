@@ -33,12 +33,6 @@ class SourceMergeStrategy(MergeStrategy):
     """
 
     def _choose_row(self, *rows_data) -> tuple:
-        # try:
-        #     if rows_data[1][2] == "Admin":
-        #         import pudb; pudb.set_trace()
-        # except Exception as e:
-        #     pass
-
         for row, source in rows_data:
             if source == "source":
                 return row

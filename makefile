@@ -1,4 +1,4 @@
-MODULE = database-merge
+MODULE = database_merge
 MAIN = ./main.py
 
 install:
