@@ -94,6 +94,7 @@ class MergeTest(unittest.TestCase):
             return [row[1:] for row in rows]
 
         users = db_helpers.get_rows(target, "users")
+        import pudb; pudb.set_trace()
         # compare rows without IDs (order doesn't matter)
         self.assertEqual(
             set(strip_ids(users)),

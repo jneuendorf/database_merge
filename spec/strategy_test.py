@@ -40,8 +40,6 @@ class StrategyTest(unittest.TestCase):
         strategy = strategies.SourceMergeStrategy()
         rows_datas = self.get_test_rows()
 
-        import pudb; pudb.set_trace()
-
         self.assertEqual(strategy.choose_row(*rows_datas[0]), ["source0"])
         self.assertEqual(strategy.choose_row(*rows_datas[1]), ["source1"])
         self.assertEqual(strategy.choose_row(*rows_datas[2]), ["source2.1"])

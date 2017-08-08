@@ -50,7 +50,10 @@ class RowsDict():
 
     def __str__(self) -> str:
         rows = list(self.rows.values())
-        return f"RowsDict(strategy={self.strategy.__class__.__name__}, rows={rows})"
+        return (
+            f"RowsDict(table_name={self.table_name}, "
+            f"strategy={self.strategy.__class__.__name__}, rows={rows})"
+        )
 
     def __iter__(self):
         return iter(self.rows)

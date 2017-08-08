@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Iterable, List, Tuple
+from typing import Any, Dict, Iterable, List
 
 # from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import inspect, Table
@@ -126,11 +126,7 @@ def merge_tables(source: DbData, target: DbData, table_name: str) -> RowsDict:
     merged_rows = RowsDict(table_name=table_name, strategy=SourceMergeStrategy())
 
     if db_helpers.table_structures_equal(source_table, target_table):
-        # if table_name == "admins":
-        #     import pudb; pudb.set_trace()
         for row in source.session.query(source_table).all():
-            # print(row)
-            # print(dir(row))
             merged_rows.put(
                 hash_row(source_table, row),
                 row,
@@ -172,7 +168,7 @@ def get_indices_for_hashing(table: Table) -> List[int]:
     ]
 
 
-def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str, List[Tuple[tuple, Any]]]:
+def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str, List[Any]]:
     """
     Reassigns e.g. primary keys so relationships stay intact.
     The keys are adjusted in the merged_rows RowsDict.
@@ -214,18 +210,22 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
     """
 
     table_rows_by_name = {}
-    sorted_tables = db.base.metadata.sorted_tables
+    print("merged_tables:", [str(t) for t in merged_tables])
+    merged_tables_by_name = {
+        merged_table.table_name: merged_table
+        for merged_table in merged_tables
+    }
+    sorted_tables = [
+        table
+        for table in db.base.metadata.sorted_tables
+        if table.name in merged_tables_by_name
+    ]
 
     # Iterate tables from tables WITH foreign keys to tables WITHOUT foreign keys.
     # -> Order in which the tables could be deleted.
     for table in reversed(sorted_tables):
         table_name = table.name
-        # find RowsDict with according `table_name`
-        merged_table = [
-            merged_table
-            for merged_table in merged_tables
-            if merged_table.table_name == table_name
-        ][0]
+        merged_table = merged_tables_by_name[table_name]
 
         # ASSUMPTION: IDs as primary keys in 1st column
         id_generator = value_generators.value_generator_for_type(int)
@@ -234,7 +234,9 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
             # row = list(row)
             # old_pk = row[0]
             row[0] = next(id_generator)
-            rows_by_old_pks[primary_keys] = row
+            if primary_keys not in rows_by_old_pks:
+                rows_by_old_pks[primary_keys] = []
+            rows_by_old_pks[primary_keys].append(row)
         table_rows_by_name[table_name] = rows_by_old_pks
 
     for referenced_table in sorted_tables:
@@ -242,7 +244,7 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
         referencing_tables = db_helpers.find_referencing_tables_and_columns(db, referenced_table_name)
         for referencing_table, referencing_columns in referencing_tables:
             # old_pks contains the primary keys before the merge
-            for _, referencing_row in table_rows_by_name[referencing_table.name].items():
+            for _, referencing_rows in table_rows_by_name[referencing_table.name].items():
                 for referencing_column in referencing_columns:
                     ref_col_name = referencing_column.name
                     fk_idx = [
@@ -250,29 +252,31 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
                         for i, col in enumerate(referencing_table.columns)
                         if col.name == ref_col_name
                     ][0]
-                    # This is the primary key from after the merge
-                    # but still pointing to the primary key from before the merge.
-                    fk = referencing_row[fk_idx]
-                    referenced_row = None
-                    for old_pks in table_rows_by_name[referenced_table_name]:
-                        potentially_referenced_row = table_rows_by_name[referenced_table_name][old_pks]
-                        if fk in old_pks:
-                            referenced_row = potentially_referenced_row
-                            break
 
-                    if referenced_row is None:
-                        raise ValueError(
-                            f"Could not find a row with primary key {fk} "
-                            f"in {referenced_table_name}"
-                        )
+                    for referencing_row in referencing_rows:
+                        # This is the primary key from after the merge
+                        # but still pointing to the primary key from before the merge.
+                        fk = referencing_row[fk_idx]
+                        referenced_row = None
+                        for old_pks in table_rows_by_name[referenced_table_name]:
+                            # TODO: this is a list of rows instead of a row!
+                            # If we have multiple rows that are referenced how do we know which one is the wanted one?
+                            potentially_referenced_rows = table_rows_by_name[referenced_table_name][old_pks]
+                            if fk in old_pks:
+                                referenced_row = potentially_referenced_rows
+                                break
 
-                    # if old_pks not in table_rows_by_name[referenced_table_name]:
-                    #     import pudb; pudb.set_trace()
-                    # referenced_row = table_rows_by_name[referenced_table_name][old_pks]
-                    # update row's foreign key value
-                    # ASSUMPTION: IDs as primary keys in 1st column
-                    referencing_row[fk_idx] = referenced_row[0]
+                        if referenced_row is None:
+                            raise ValueError(
+                                f"Could not find a row with primary key {fk} "
+                                f"in {referenced_table_name}"
+                            )
 
+                        # update row's foreign key value
+                        # ASSUMPTION: IDs as primary keys in 1st column
+                        referencing_row[fk_idx] = referenced_row[0]
+
+    import pudb; pudb.set_trace()
     # drop meta info about old primary keys
     return {
         table_name: [row for old_pks, row in rows_by_old_pks.items()]
