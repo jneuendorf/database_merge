@@ -11,6 +11,7 @@ from Input import Input
 from merge import merge
 import strategies
 
+
 class MergeTest(unittest.TestCase):
 
     # database reflection apparently does not work for in-memory sqlite dbs
