@@ -128,10 +128,10 @@ class MergeTest(unittest.TestCase):
         }
 
         for user in users:
-            print((user.name, user.password))
-            print("expect:", totals_by_user[(user.name, user.password)])
-            print("got:", {order.total for order in user.orders})
-            print("")
+            # print((user.name, user.password))
+            # print("expect:", totals_by_user[(user.name, user.password)])
+            # print("got:", {order.total for order in user.orders})
+            # print("")
             self.assertEqual(
                 {order.total for order in user.orders},
                 totals_by_user[(user.name, user.password)]

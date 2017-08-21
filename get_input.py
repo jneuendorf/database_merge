@@ -3,11 +3,6 @@ import yaml
 
 from Input import Input
 
-# https://stackoverflow.com/a/20007730/6928824
-def ordinal(num):
-    start = (math.floor(num/10) % 10 != 1) * (num % 10 < 4) * num % 10
-    return "%d%s" % (num, "tsnrhtdd"[start::4])
-
 
 def get_input(cli_args):
     script_name = cli_args[0]

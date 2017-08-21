@@ -45,9 +45,6 @@ class RowsDict():
     def get_rows(self) -> Iterable[list]:
         return (row for row_hash, (row, origin, primary_keys) in self.rows.items())
 
-    def get_rows_with_pks(self) -> Iterable[Tuple[list, frozenset]]:
-        return ((row, primary_keys) for row_hash, (row, origin, primary_keys) in self.rows.items())
-
     def values(self):
         return self.rows.values()
 
@@ -59,5 +56,4 @@ class RowsDict():
         )
 
     def __iter__(self):
-        import pudb; pudb.set_trace()
         return iter(self.rows)

@@ -83,5 +83,5 @@ class RowsDictTest(unittest.TestCase):
     def test_str(self):
         self.assertEqual(
             str(self.rows_dict),
-            "RowsDict(strategy=PseudoMergeStrategy, rows=[])"
+            "RowsDict(table_name=pseudo_table, strategy=PseudoMergeStrategy, rows=[])"
         )
