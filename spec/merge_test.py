@@ -95,7 +95,6 @@ class MergeTest(unittest.TestCase):
             return [row[1:] for row in rows]
 
         users = db_helpers.get_rows(target, "users")
-        import pudb; pudb.set_trace()
         # compare rows without IDs (order doesn't matter)
         self.assertEqual(
             set(strip_ids(users)),
@@ -121,19 +120,19 @@ class MergeTest(unittest.TestCase):
         totals_by_user = {
             ("testuser1", "pw1"): {"30.12"},
             ("testuser2 with more data", "pw2"): {"12.39"},
-            ("testuser3", "pw3"): {"42"},
+            ("testuser3", "pw3"): {"42.00"},
             ("testuser2", "pw21"): {"13.37"},
             ("testuser3 with more data", "pw3"): {"51.10"},
             # there should be both orders because the user exists in both databases
-            ("testuser4", "pw4"): {"43", "1.18"},
+            ("testuser4", "pw4"): {"43.00", "1.18"},
         }
 
         for user in users:
             print((user.name, user.password))
             print("expect:", totals_by_user[(user.name, user.password)])
-            print("got:", {float(order.total) for order in user.orders})
+            print("got:", {order.total for order in user.orders})
             print("")
             self.assertEqual(
-                {float(order.total) for order in user.orders},
+                {order.total for order in user.orders},
                 totals_by_user[(user.name, user.password)]
             )

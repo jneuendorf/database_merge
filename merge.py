@@ -284,7 +284,6 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
                         # ASSUMPTION: IDs as primary keys in 1st column
                         referencing_row[fk_idx] = referenced_row[0]
 
-    import pudb; pudb.set_trace()
     # drop meta info about old primary keys
     return {
         table_name: [row for old_pks, rows in rows_by_old_pks.items() for row, origin in rows]
