@@ -1,5 +1,5 @@
 from collections import OrderedDict
-from typing import Iterable, Tuple, Union
+from typing import Iterable, Mapping, Tuple, Union
 
 from .MergeStrategy import MergeStrategy
 
@@ -50,6 +50,10 @@ class RowsDict():
 
     def values(self):
         return self.rows.values()
+
+    # Returns list of tuple(row, origin) grouped by primary_keys.
+    def rows_by_primary_keys(self) -> Mapping[frozenset, Tuple[list, str]]:
+        return {primary_keys: (row, origin) for (row, origin, primary_keys) in self.rows.values()}
 
     def __str__(self) -> str:
         rows = list(self.rows.values())

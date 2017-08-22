@@ -230,13 +230,13 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
         # ASSUMPTION: IDs as primary keys in 1st column
         id_generator = value_generators.value_generator_for_type(int)
         rows_by_old_pks = {}
-        for row, origin, primary_keys in merged_table.values():
+        for row, primary_keys in merged_table.get_rows_with_pks():
             # row = list(row)
             # old_pk = row[0]
             row[0] = next(id_generator)
             if primary_keys not in rows_by_old_pks:
                 rows_by_old_pks[primary_keys] = []
-            rows_by_old_pks[primary_keys].append((row, origin))
+            rows_by_old_pks[primary_keys].append(row)
         table_rows_by_name[table_name] = rows_by_old_pks
 
     for referenced_table in sorted_tables:
@@ -244,7 +244,7 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
         referencing_tables = db_helpers.find_referencing_tables_and_columns(db, referenced_table_name)
         for referencing_table, referencing_columns in referencing_tables:
             # old_pks contains the primary keys before the merge
-            for _, referencing_rows_with_origin in table_rows_by_name[referencing_table.name].items():
+            for _, referencing_rows in table_rows_by_name[referencing_table.name].items():
                 for referencing_column in referencing_columns:
                     ref_col_name = referencing_column.name
                     fk_idx = [
@@ -253,7 +253,7 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
                         if col.name == ref_col_name
                     ][0]
 
-                    for referencing_row, referencing_origin in referencing_rows_with_origin:
+                    for referencing_row in referencing_rows:
                         # This is the primary key from after the merge
                         # but still pointing to the primary key from before the merge.
                         fk = referencing_row[fk_idx]
@@ -263,21 +263,13 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
                             # If we have multiple rows that are referenced how do we know which one is the wanted one?
                             potentially_referenced_rows = table_rows_by_name[referenced_table_name][old_pks]
                             if fk in old_pks:
-                                # if fk == 7:
-                                #     import pudb; pudb.set_trace()
-                                for potentially_referenced_row_with_origin in potentially_referenced_rows:
-                                    potentially_referenced_row, potentially_referenced_origin = potentially_referenced_row_with_origin
-                                    # Identify correct row by origin.
-                                    # Or if there is only 1 row the rows from source and target have been merged. So we can take it anyway because the data is the same.
-                                    if referencing_origin == potentially_referenced_origin or len(potentially_referenced_rows) == 1:
-                                        referenced_row = potentially_referenced_row
-                                        break
+                                referenced_row = potentially_referenced_rows
+                                break
 
                         if referenced_row is None:
-                            import pudb; pudb.set_trace()
                             raise ValueError(
                                 f"Could not find a row with primary key {fk} "
-                                f"in {referenced_table_name}."
+                                f"in {referenced_table_name}"
                             )
 
                         # update row's foreign key value
@@ -287,7 +279,7 @@ def adjust_relationships(db: DbData, merged_tables: List[RowsDict]) -> Dict[str,
     import pudb; pudb.set_trace()
     # drop meta info about old primary keys
     return {
-        table_name: [row for old_pks, rows in rows_by_old_pks.items() for row, origin in rows]
+        table_name: [row for old_pks, row in rows_by_old_pks.items()]
         for table_name, rows_by_old_pks in table_rows_by_name.items()
     }
     # sorted_tables
